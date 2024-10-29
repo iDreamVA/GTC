@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachable Machine Image Model</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #ece9e6, #ffffff);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 16px;
+            color: white;
+        }
+
+        .open-button {
+            background-color: #2196F3;
+        }
+
+        .open-button:hover {
+            background-color: #1976D2;
+        }
+
+        .start-button {
+            background-color: #4CAF50;
+        }
+
+        .start-button:hover {
+            background-color: #45a049;
+        }
+
+        .stop-button {
+            background-color: #f44336;
+        }
+
+        .stop-button:hover {
+            background-color: #e53935;
+        }
+
+        .webcam-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .label-container {
+            margin-top: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .label-container div {
+            margin: 5px;
+            padding: 8px;
+            border-radius: 5px;
+            background-color: #f0f2f5;
+            color: #333;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Teachable Machine Image Model</h1>
+        <div class="button-group">
+            <button type="button" class="button open-button" onclick="loadModel()">Open Model</button>
+            <button type="button" class="button start-button" onclick="startWebcam()">Start Camera</button>
+            <button type="button" class="button stop-button" onclick="stopWebcam()">Stop</button>
+        </div>
+        <div id="webcam-container" class="webcam-container"></div>
+        <div id="label-container" class="label-container"></div>
+    </div>
+
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/Bfhbi3jpt/";
+        let model, webcam, labelContainer, maxPredictions;
+        let isModelLoaded = false;
+        let isWebcamActive = false;
+
+        async function loadModel() {
+            if (isModelLoaded) {
+                alert("Model already loaded!");
+                return;
+            }
+
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+
+            labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = "";
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+
+            isModelLoaded = true;
+            alert("Model loaded successfully!");
+        }
+
+        async function startWebcam() {
+            if (!isModelLoaded) {
+                alert("Please load the model first.");
+                return;
+            }
+
+            if (isWebcamActive) {
+                alert("Webcam is already active!");
+                return;
+            }
+
+            const flip = true;
+            webcam = new tmImage.Webcam(200, 200, flip);
+            await webcam.setup();
+            await webcam.play();
+            isWebcamActive = true;
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+        }
+
+        async function loop() {
+            if (isWebcamActive) {
+                webcam.update();
+                await predict();
+                window.requestAnimationFrame(loop);
+            }
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            for (let i = 0; i < maxPredictions; i++) {
+                const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+                labelContainer.childNodes[i].innerHTML = classPrediction;
+            }
+        }
+
+        function stopWebcam() {
+            isWebcamActive = false;
+        }
+    </script>
+</body>
+</html>
